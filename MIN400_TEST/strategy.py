@@ -109,9 +109,6 @@ class Strategy:
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
                                 df_if_trade_suspend, df_limit_up, df_limit_down], axis=1)
 
-        df_merged['if_ST'].fillna(0, inplace=True)
-        df_merged['if_delist_period'].fillna(0, inplace=True)
-
         self.df_merged = df_merged
         #================================#
 
@@ -127,13 +124,31 @@ class Strategy:
         # TODO: 遴选新成分(权重%)
 
         mask = ~self.df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
-        
         df_filtered = self.df_merged[mask]
+
         df_filtered = df_filtered[df_filtered['if_listing'] == 1]
+
+        remove_rows = pd.DataFrame()
+
+        for index, row in df_filtered.iterrows():
+            trd_date = index[0]
+            stkcd = index[1]
+            up_price = row['limit_up']
+            down_price = row['limit_down']
+            close_price = row['close']
+            suspend = row['if_suspend']
+
+            # check if the stock is suspended in that day
+            if suspend == 1:
+                remove_rows
+            # check if close_price reaches the limit_up or limit_down
+            elif up_price == close_price or down_price == close_price:
+                remove_rows
+         
         
-        df_filtered = df_filtered[df_filtered['if_delist_period'] == 0]
+        df_filtered = df_filtered[df_filtered['if_delist_period'] != 1]
         df_filtered = df_filtered[df_filtered['close'] >= 1]
-        df_filtered = df_filtered[df_filtered['if_ST'] == 0]
+        df_filtered = df_filtered[df_filtered['if_ST'] != 1]
 
         # Filter out the 400 minimum market value stocks in each day
         df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
