@@ -1,0 +1,10 @@
+{
+    "Desc": [
+        "计算数据预载"
+    ],
+    "TASKID": "IND_ALPHA_INDIC_TEST_ALL_PL",
+    "PACKAGEPATH": "quantvale.builtin_strategies",
+    "STRATEGY": "IND_ALPHA_INDIC_TEST",
+    "MODE": "PL",
+    "Arguments": {}
+}

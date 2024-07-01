@@ -1,0 +1,15 @@
+{
+    "TASKID": "INDEX_ALPHA_BT_DEMO_1",
+    "PACKAGEPATH": "XupengganStrategies.Demos",
+    "STRATEGY": "INDEX_ALPHA_BT_DEMO",
+    "MODE": "BT",
+    "UseIndexDB": true,
+    "QSCode": "8841409.WI",
+    "BeginDate": "2023-2-1",
+    "EndDate": "2023-2-15",
+    "Slippage": 6e-4,
+    "DateInterval": 2,
+    "Arguments": {
+        "WeightMethod": "EQUAL"
+    }
+}

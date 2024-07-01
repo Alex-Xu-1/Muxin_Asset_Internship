@@ -1,0 +1,22 @@
+{
+    "Desc": [
+        "Alpha挖掘:V3",
+        "================================",
+        "688238 2022-3-22上市",
+        "================================"
+    ],
+    "TASKID": "IND_ALPHA_INDIC_TEST_POOL_3",
+    "PACKAGEPATH": "quantvale.builtin_strategies",
+    "STRATEGY": "IND_ALPHA_INDIC_TEST",
+    "MODE": "BT",
+    "QSCode": "OriginalIndex",
+    "UseIndexDB": false,
+    "Pool": "E:\\qv\\quantvale\\builtin_strategies\\IND_ALPHA_INDIC_TEST\\ParamsFiles\\POOL_3.csv",
+    "BeginDate": "2022-3-16",
+    "EndDate": "2022-4-16",
+    "Slippage": 10e-4,
+    "DateInterval": 2,
+    "Arguments": {
+        "StockNum": 20
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "TASKID": "INIT_SYS_RUN_TRY",
+    "PACKAGEPATH": "XupengganStrategies",
+    "STRATEGY": "INIT_SYS_RUN_TRY",
+    "MODE": "BT",
+    "QSCode": "600000.SH",
+    "BeginDate": "2024-6-17",
+    "EndDate": "2024-6-21",
+    "Arguments": {
+        "WeightMethod": "EQUAL"
+    }
+}

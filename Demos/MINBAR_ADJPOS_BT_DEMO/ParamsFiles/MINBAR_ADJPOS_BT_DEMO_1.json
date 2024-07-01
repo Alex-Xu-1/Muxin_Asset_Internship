@@ -1,0 +1,18 @@
+{
+    "Desc": [
+        "`Pool`: 基准组合的每日权重(qvcode,weight两列)",
+        "`BacktestBaseValue`: 回测基点, 不指定时默认为1000"
+    ],
+    "TASKID": "MINBAR_ADJPOS_BT_DEMO_1",
+    "PACKAGEPATH": "quantvale.builtin_strategies.Demos",
+    "STRATEGY": "MINBAR_ADJPOS_BT_DEMO",
+    "MODE": "BT",
+    "BeginDate": "2024-1-1",
+    "EndDate": "2024-6-19",
+    "Cycle": "1m",
+    "Slippage": 6e-4,
+    "Arguments": {
+        "Pool": "E:\\qv\\quantvale\\builtin_strategies\\Demos\\MINBAR_ADJPOS_BT_DEMO\\ParamsFiles\\POOL_300.csv",
+        "BacktestBaseValue": 100
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "Desc": [
+        "Alpha挖掘:V3",
+        "================================",
+        "若`UseIndexDB`=true, 则使用指数库中`QSCode`指数的每日成分",
+        "否则使用`Pool`(csv文件)指定的股票池作为每日成分, 未上市权重为0",
+        "每隔`DateInterval`(>=1)日调仓",
+        "调仓交易日: 为当日前一天收盘时",
+        "在调仓交易日按`Slippage`算成本扣点并修正新点位",
+        "================================"
+    ],
+    "TASKID": "IND_ALPHA_INDIC_TEST_POOL_600519_BT",
+    "PACKAGEPATH": "quantvale.builtin_strategies",
+    "STRATEGY": "IND_ALPHA_INDIC_TEST",
+    "MODE": "BT",
+    "UseIndexDB": false,
+    "QSCode": "OriginalIndex",
+    "Pool": "E:\\qv\\quantvale\\builtin_strategies\\IND_ALPHA_INDIC_TEST\\ParamsFiles\\POOL_600519.csv",
+    "BeginDate": "2022-5-18",
+    "EndDate": "2022-8-18",
+    "Slippage": 10e-4,
+    "DateInterval": 1,
+    "Arguments": {
+        "StockNum": 20
+    }
+}

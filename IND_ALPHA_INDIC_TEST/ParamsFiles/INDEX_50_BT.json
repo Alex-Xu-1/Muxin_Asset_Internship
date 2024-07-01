@@ -1,0 +1,15 @@
+{
+    "TASKID": "IND_ALPHA_INDIC_TEST_INDEX_50_BT",
+    "PACKAGEPATH": "quantvale.builtin_strategies",
+    "STRATEGY": "IND_ALPHA_INDIC_TEST",
+    "MODE": "BT",
+    "UseIndexDB": true,
+    "QSCode": "000016.SH",
+    "BeginDate": "2020-1-1",
+    "EndDate": "2022-8-1",
+    "Slippage": 6e-4,
+    "DateInterval": 10,
+    "Arguments": {
+        "WeightMethod": "EQUAL"
+    }
+}

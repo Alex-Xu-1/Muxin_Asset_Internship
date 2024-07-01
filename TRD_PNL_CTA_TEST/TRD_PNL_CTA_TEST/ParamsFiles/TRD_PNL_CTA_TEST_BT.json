@@ -1,0 +1,30 @@
+{
+    "Desc": [
+        "单一标的交易回测:V1",
+        "================================",
+        "按`Cycle`周期频率交易回测`QSCode`单一标的",
+        "若`Cycle`为日频且有`IntradayCycle`, 则日内按`IntradayCycle`进行",
+        "`Benchmark`设置基准, 若缺省则基准为`QSCode`",
+        "每次开仓固定金额`Capital`",
+        "================================"
+    ],
+    "TASKID": "TRD_PNL_CTA_TEST_BT",
+    "PACKAGEPATH": "quantvale.builtin_strategies",
+    "STRATEGY": "TRD_PNL_CTA_TEST",
+    "MODE": "BT",
+    "QSCode": "300059.SZ",
+    "Benchmark": "000300.SH",
+    "BeginDate": "2021-12-6",
+    "EndDate": "2021-12-16",
+    "Cycle": "day",
+    "IntradayCycle": "1m",
+    "Capital": 1e6,
+    "Slippage": 6e-4,
+    "Arguments": {
+        "BasePrice_Pct": 1.5,
+        "OpenTrack_Pct": 1.3,
+        "CloseTrack_Pct": 0.65,
+        "Direction": 0,
+        "Rebalance": true
+    }
+}

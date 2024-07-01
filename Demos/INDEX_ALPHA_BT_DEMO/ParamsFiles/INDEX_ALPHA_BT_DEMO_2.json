@@ -1,0 +1,16 @@
+{
+    "TASKID": "INDEX_ALPHA_BT_DEMO_2",
+    "PACKAGEPATH": "quantvale.builtin_strategies.Demos",
+    "STRATEGY": "INDEX_ALPHA_BT_DEMO",
+    "MODE": "BT",
+    "QSCode": "OriginalIndex",
+    "UseIndexDB": false,
+    "Pool": "E:\\qv\\quantvale\\builtin_strategies\\Demos\\INDEX_ALPHA_BT_DEMO\\ParamsFiles\\POOL_3.csv",
+    "BeginDate": "2022-3-16",
+    "EndDate": "2022-4-16",
+    "Slippage": 10e-4,
+    "DateInterval": 2,
+    "Arguments": {
+        "WeightMethod": "EQUAL"
+    }
+}
