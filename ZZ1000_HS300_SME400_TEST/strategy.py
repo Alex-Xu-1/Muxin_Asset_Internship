@@ -109,7 +109,13 @@ class Strategy:
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
                                 df_if_trade_suspend, df_limit_up, df_limit_down], axis=1)
 
-        self.df_merged = df_merged
+        mask = ~self.df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
+        df_filtered = self.df_merged[mask]
+        df_filtered = df_filtered[df_filtered['if_listing'] == 1]
+        df_filtered.drop(columns=['if_listing'], inplace=True)
+
+        df_min_400 = self.df_filtered.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+        self.df_min_400 = df_min_400
         #================================#
 
     def __del__(self):
@@ -123,35 +129,38 @@ class Strategy:
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # TODO: 遴选新成分(权重%)
 
-        mask = ~self.df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
-        df_filtered = self.df_merged[mask]
-
-        df_filtered = df_filtered[df_filtered['if_listing'] == 1]
-
+        # Filter df_min_400 for the specific date, this returns a new dataframe containing the 400 selected stocks of today
+        df_spec = df_min_400.loc[date]
         remove_rows = pd.DataFrame()
+        flag = self.trade_cal.index(date)
 
-        for index, row in df_filtered.iterrows():
-            trd_date = index[0]
-            stkcd = index[1]
-            up_price = row['limit_up']
-            down_price = row['limit_down']
+        for index, row in df_spec.iterrows():
+            stkcd = index[1] # iteratively select the stock code from the portfolio
             close_price = row['close']
-            suspend = row['if_suspend']
+            if_ST = row['if_ST']
+            if_delist = row['if_delist_period']
+            if_suspend = row['if_trade_suspend']
+            up_limit = row['limit_up']
+            down_limit = row['limit_down']
+            
+            idx_today = self.trade_cal.index(date)
+            idx_yesterday = self.trade_cal[idx_today - 1]
 
             # check if the stock is suspended in that day
-            if suspend == 1:
+            if if_suspend == 1:
                 remove_rows
             # check if close_price reaches the limit_up or limit_down
-            elif up_price == close_price or down_price == close_price:
+            elif up_limit == close_price or down_limit == close_price:
                 remove_rows
+
+
+
+        
          
         
         df_filtered = df_filtered[df_filtered['if_delist_period'] != 1]
         df_filtered = df_filtered[df_filtered['close'] >= 1]
         df_filtered = df_filtered[df_filtered['if_ST'] != 1]
-
-        # Filter out the 400 minimum market value stocks in each day
-        df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
 
         df_min_400 = df_min_400.reset_index(level=0, drop=True)
 
