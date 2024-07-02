@@ -128,12 +128,18 @@ class Strategy:
 
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # TODO: 遴选新成分(权重%)
-        
-        # Filter df_min_400 for the specific date, this returns a new dataframe containing the 400 selected stocks of today
-        df_spec = self.df_min_400.loc[date]
-        remove_rows = pd.DataFrame()
 
+        df_spec = self.df_min_400.loc[date]
+        selected_stocks = df_spec.index.get_level_values(1)
+
+        new_weights = weights # At the end of each day, weights is refreshed. On the second day, weight is \
+        new_weights[:] = 0      # passed as yesterday's old_weights. We first assign the new_weights today \
+        new_weights[selected_stocks] = 1/400   # to be the old_weights yesterday, and then ready for further refreshing.
+                                
+
+        # iteratively go through each stocks in the df_spec, performing weights adjustment based on defined criteria
         for index, row in df_spec.iterrows():
+
             stkcd = index[1] # iteratively select the stock code from the portfolio
             close_price = row['close']
             if_ST = row['if_ST']
@@ -147,27 +153,37 @@ class Strategy:
 
             # check if the stock is suspended in that day
             if if_suspend == 1:
-                remove_rows
-            # check if close_price reaches the limit_up or limit_down
-            elif up_limit == close_price or down_limit == close_price:
-                remove_rows
-        
-        df_filtered = df_filtered[df_filtered['if_delist_period'] != 1]
-        df_filtered = df_filtered[df_filtered['close'] >= 1]
-        df_filtered = df_filtered[df_filtered['if_ST'] != 1]
+                # today this stock weight can't be adjusted, we can't trade on this stock since it is suspended. \
+                # so this stock remains in the selected 400 stocks and we assign the weight of this stock to be the same as yesterday
+                new_weights[stkcd] = weights.get(stkcd)
+                pass
 
-        df_min_400 = df_min_400.reset_index(level=0, drop=True)
+            elif up_limit == close_price:
+                # we can only sell this stock rather than buy it, so we can only adjust the weight of this stock to be smaller than yesterday
+                if if_ST == 1 or close_price < 1 or if_delist == 1:
+                    # assign the weight of this stock to be 0
+                    new_weights[stkcd] = 0
+                    pass
+                else:
+                    # assign this stock yesterday weight
+                    new_weights[stkcd] = weights.get(stkcd)
+                    pass
 
-        df_min_400 = df_min_400.reset_index()
+            elif down_limit == close_price:
+                # we can only buy this stock rather than sell it, so we can only adjust the weight of this stock to be larger than yesterday
+                # so we just simply set it to be yesterday's weight since we cannot sell
+                new_weights[stkcd] = weights.get(stkcd)
+                pass
 
-        df_sec = pd.DataFrame(weights)
-
-        selected_stocks = df_min_400[df_min_400['date'] == date]['qscode']
-
-        self.log.record(selected_stocks)
-
-        new_weights = weights[weights.index.isin(selected_stocks)]
-        new_weights[:] = 1/400
+            else: # continue normal selection
+                if if_ST == 1 or close_price < 1 or if_delist == 1:
+                    # assign the weight of this stock to be 0
+                    new_weights[stkcd] = 0
+                    pass
+                else:
+                    # assign the weight of this stock to be the same as yesterday
+                    new_weights[stkcd] = weights.get(stkcd)
+                    pass
 
         self.log.record(new_weights)
 
