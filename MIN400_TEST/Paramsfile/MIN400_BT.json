@@ -1,5 +1,5 @@
 {
-    "TASKID": "MIN400_BT",
+    "TASKID": "xpg_MIN400_BT",
     "PACKAGEPATH": "XupengganStrategies",
     "STRATEGY": "MIN400_TEST",
     "MODE": "BT",

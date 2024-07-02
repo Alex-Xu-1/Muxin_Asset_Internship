@@ -128,11 +128,10 @@ class Strategy:
 
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # TODO: 遴选新成分(权重%)
-
+        
         # Filter df_min_400 for the specific date, this returns a new dataframe containing the 400 selected stocks of today
-        df_spec = df_min_400.loc[date]
+        df_spec = self.df_min_400.loc[date]
         remove_rows = pd.DataFrame()
-        flag = self.trade_cal.index(date)
 
         for index, row in df_spec.iterrows():
             stkcd = index[1] # iteratively select the stock code from the portfolio
@@ -152,11 +151,6 @@ class Strategy:
             # check if close_price reaches the limit_up or limit_down
             elif up_limit == close_price or down_limit == close_price:
                 remove_rows
-
-
-
-        
-         
         
         df_filtered = df_filtered[df_filtered['if_delist_period'] != 1]
         df_filtered = df_filtered[df_filtered['close'] >= 1]

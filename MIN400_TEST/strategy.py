@@ -133,10 +133,10 @@ class Strategy:
         
         df_filtered = df_filtered[df_filtered['if_delist_period'] == 0]
         df_filtered = df_filtered[df_filtered['close'] >= 1]
-        df_filtered = df_filtered[df_filtered['if_ST'] == 0]
+        df_min_400 = df_filtered[df_filtered['if_ST'] == 0]
 
         # Filter out the 400 minimum market value stocks in each day
-        df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+        df_min_400 = df_filtered.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
 
         df_min_400 = df_min_400.reset_index(level=0, drop=True)
 
