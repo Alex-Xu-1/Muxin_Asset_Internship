@@ -75,6 +75,9 @@ class Strategy:
         # mask = ~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
         df_filtered = df_merged[~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')]
         df_min_400 = df_filtered[df_filtered['if_listing'] == 1]
+        df_min_400 = df_min_400[~(df_min_400['if_ST'] == 1)]
+        df_min_400 = df_min_400[df_min_400['close'] >= 1]
+        df_min_400 = df_min_400[~(df_min_400['if_delist_period'] == 1)]
         df_min_400.drop(columns=['if_listing'], inplace=True)
 
         df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
