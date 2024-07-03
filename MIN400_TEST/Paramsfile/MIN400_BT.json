@@ -5,7 +5,7 @@
     "MODE": "BT",
     "QSCode": "OriginalIndex",
     "UseIndexDB": false,
-    "Pool": "//192.168.2.39/XupengganStrategies/MIN400_TEST/stk_weights_pool.csv",
+    "Pool": "//192.168.2.39/XupengganStrategies/MIN400_TEST/df_HUSHEN_A.csv",
     "BeginDate": "2024-05-13",
     "EndDate": "2024-06-24",
     "DateInterval": 1,

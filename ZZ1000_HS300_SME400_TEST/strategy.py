@@ -28,9 +28,11 @@ class Strategy:
 
     def __init__(self,
                  log: tasksys.TaskLog,
+                 taskdir: str,
                  params: dict,
                  **kwargs,
                  ):
+        self.taskdir = taskdir
         self.log = log
         self.params = params
         self.start_day = self.params["BeginDate"]
@@ -119,8 +121,9 @@ class Strategy:
         #================================#
 
     def __del__(self):
+        # self.df_out.index.name = 'date'
+        # self.df_out.to_csv(os.path.join(self.taskdir, f"data/size_data.csv"), encoding='gbk')
         pass
-
     #================================================#
     def on_func(self,
                 date: datetime.date,
@@ -132,9 +135,15 @@ class Strategy:
         df_spec = self.df_min_400.loc[date]
         selected_stocks = df_spec.index.get_level_values(1)
 
-        new_weights = weights # At the end of each day, weights is refreshed. On the second day, weight is \
-        new_weights[:] = 0      # passed as yesterday's old_weights. We first assign the new_weights today \
-        new_weights[selected_stocks] = 1/400   # to be the old_weights yesterday, and then ready for further refreshing.
+        new_weights = pd.Series(0, index=weights.index)
+
+        new_weights[selected_stocks] = 1/400
+
+        # try:
+        #     for i in selected_stocks:
+        #         new_weights[i] = 1/400
+        # except:
+        #     self.log.record(i)
                                 
 
         # iteratively go through each stocks in the df_spec, performing weights adjustment based on defined criteria

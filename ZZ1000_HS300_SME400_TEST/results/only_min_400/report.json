@@ -1,0 +1,27 @@
+{
+    "RunTime": {
+        "start": "2024-07-03 10:48:10",
+        "stop": "2024-07-03 10:49:57",
+        "total": 106.691,
+        "chrono": {
+            "Init": 0.047,
+            "GetStockPool": 0.031,
+            "LoadBarsData": 5.264,
+            "LoadPoolDayBars": 2.359,
+            "GenOriginalWeights": 4.046,
+            "GenOriginalIndex": 3.937,
+            "StrtgInit": 77.3,
+            "GenNewDailyConstituents": 0.89,
+            "GenNewIndex": 11.341,
+            "GenNewIndexWithCost": 0.031,
+            "Summary": 0.047,
+            "ExportData": 0.203,
+            "Plot": 1.101,
+            "End": 0.094
+        }
+    },
+    "Output": {
+        "Dates": 30,
+        "Constituents": 5301
+    }
+}
