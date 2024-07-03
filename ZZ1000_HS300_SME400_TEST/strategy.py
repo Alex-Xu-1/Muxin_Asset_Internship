@@ -109,12 +109,12 @@ class Strategy:
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
                                 df_if_trade_suspend, df_limit_up, df_limit_down], axis=1)
 
-        mask = ~self.df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
-        df_filtered = self.df_merged[mask]
-        df_filtered = df_filtered[df_filtered['if_listing'] == 1]
-        df_filtered.drop(columns=['if_listing'], inplace=True)
+        # mask = ~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
+        df_filtered = df_merged[~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')]
+        df_min_400 = df_filtered[df_filtered['if_listing'] == 1]
+        df_min_400.drop(columns=['if_listing'], inplace=True)
 
-        df_min_400 = self.df_filtered.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+        df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
         self.df_min_400 = df_min_400
         #================================#
 
