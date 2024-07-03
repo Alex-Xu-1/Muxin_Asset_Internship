@@ -41,8 +41,8 @@ class Strategy:
         self.trade_cal: list = kwargs['trade_cal']
         self.all_qvcodes: list = kwargs['all_qvcodes']
         
-        beg = pd.to_datetime(self.start_day)
-        end = pd.to_datetime(self.end_day)
+        beg = pd.to_datetime(self.start_day).date()
+        end = pd.to_datetime(self.end_day).date()
 
         #================================#
         # Getting raw data of all SH+SZ A share stocks, including: \
@@ -65,6 +65,8 @@ class Strategy:
         df_if_trade_suspend = get_raw("xdf_trade_suspension", 'if_trade_suspend')
         df_limit_up = get_raw("xdf_limit_up_price", 'limit_up')
         df_limit_down = get_raw("xdf_limit_down_price", 'limit_down')
+        df_hs300_weights = get_raw("xdf_hs300_weight", 'hs300_weights')
+        df_zz1000_weights = get_raw("xdf_zz1000_weight", 'zz1000_weights')
 
         # Merging
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
