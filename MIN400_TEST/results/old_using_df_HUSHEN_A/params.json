@@ -1,15 +1,15 @@
 {
-    "TASKID": "xpg_MIN400_BT",
+    "TASKID": "MIN400_BT",
     "PACKAGEPATH": "XupengganStrategies",
     "STRATEGY": "MIN400_TEST",
     "MODE": "BT",
     "QSCode": "OriginalIndex",
     "UseIndexDB": false,
-    "Pool": "//192.168.2.39/XupengganStrategies/MIN400_TEST/stk_weights_pool.csv",
+    "Pool": "//192.168.2.39/XupengganStrategies/MIN400_TEST/df_HUSHEN_A.csv",
     "BeginDate": "2024-05-13",
     "EndDate": "2024-06-24",
     "DateInterval": 1,
-    "Slippage": 1.5e-3,
+    "Slippage": 0.0015,
     "Arguments": {
         "WeightMethod": "EQUAL"
     }

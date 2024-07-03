@@ -148,42 +148,42 @@ class Strategy:
             up_limit = row['limit_up']
             down_limit = row['limit_down']
             
-            idx_today = self.trade_cal.index(date)
-            idx_yesterday = self.trade_cal[idx_today - 1]
+            # idx_today = self.trade_cal.index(date)
+            # idx_yesterday = self.trade_cal[idx_today - 1]
 
             # check if the stock is suspended in that day
             if if_suspend == 1:
                 # today this stock weight can't be adjusted, we can't trade on this stock since it is suspended. \
                 # so this stock remains in the selected 400 stocks and we assign the weight of this stock to be the same as yesterday
                 new_weights[stkcd] = weights.get(stkcd)
-                pass
+                continue
 
             elif up_limit == close_price:
                 # we can only sell this stock rather than buy it, so we can only adjust the weight of this stock to be smaller than yesterday
                 if if_ST == 1 or close_price < 1 or if_delist == 1:
                     # assign the weight of this stock to be 0
                     new_weights[stkcd] = 0
-                    pass
+                    continue
                 else:
                     # assign this stock yesterday weight
                     new_weights[stkcd] = weights.get(stkcd)
-                    pass
+                    continue
 
             elif down_limit == close_price:
                 # we can only buy this stock rather than sell it, so we can only adjust the weight of this stock to be larger than yesterday
                 # so we just simply set it to be yesterday's weight since we cannot sell
                 new_weights[stkcd] = weights.get(stkcd)
-                pass
+                continue
 
             else: # continue normal selection
                 if if_ST == 1 or close_price < 1 or if_delist == 1:
                     # assign the weight of this stock to be 0
                     new_weights[stkcd] = 0
-                    pass
+                    continue
                 else:
                     # assign the weight of this stock to be the same as yesterday
                     new_weights[stkcd] = weights.get(stkcd)
-                    pass
+                    continue
 
         self.log.record(new_weights)
 

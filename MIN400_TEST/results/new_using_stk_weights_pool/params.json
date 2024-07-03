@@ -9,7 +9,7 @@
     "BeginDate": "2024-05-13",
     "EndDate": "2024-06-24",
     "DateInterval": 1,
-    "Slippage": 1.5e-3,
+    "Slippage": 0.0015,
     "Arguments": {
         "WeightMethod": "EQUAL"
     }
