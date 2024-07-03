@@ -49,63 +49,22 @@ class Strategy:
             # if_Listing, daily_Closing_Price, if_ST, is_in_Delisting_Period, \
             # if_Trade_Suspension, Market_Value
 
-        df_listing = rawfactors.get_rawfactor_table_by_date(
+        def get_raw(factor_name, col_rename):
+            df = rawfactors.get_rawfactor_table_by_date(
                                         db="TEST",
-                                        name="xdf_if_listing_qvcode",
+                                        name=factor_name,
                                         begin_date=beg,
                                         end_date=end)
+            return df.stack().rename(col_rename)
 
-        df_close = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_close",
-                                        begin_date=beg,
-                                        end_date=end)
-
-        df_ST = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_if_ST",
-                                        begin_date=beg,
-                                        end_date=end)
-
-        df_mkt_val = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_market_value",
-                                        begin_date=beg,
-                                        end_date=end)
-
-        df_delist_period = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_if_delisting_period",
-                                        begin_date=beg,
-                                        end_date=end)
-
-        df_if_trade_suspend = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_trade_suspension",
-                                        begin_date=beg,
-                                        end_date=end)
-
-        df_limit_up = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_limit_up_price",
-                                        begin_date=beg,
-                                        end_date=end)
-
-        df_limit_down = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name="xdf_limit_down_price",
-                                        begin_date=beg,
-                                        end_date=end)
-
-                
-        df_listing = df_listing.stack().rename('if_listing')
-        df_close = df_close.stack().rename('close')
-        df_ST = df_ST.stack().rename('if_ST')
-        df_mkt_val = df_mkt_val.stack().rename('mkt_val')
-        df_delist_period = df_delist_period.stack().rename('if_delist_period')
-        df_if_trade_suspend = df_if_trade_suspend.stack().rename('if_trade_suspend')
-        df_limit_up = df_limit_up.stack().rename('limit_up')
-        df_limit_down = df_limit_down.stack().rename('limit_down')
+        df_listing = get_raw("xdf_if_listing_qvcode", 'if_listing')
+        df_close = get_raw("xdf_close", 'close')
+        df_ST = get_raw("xdf_if_ST", 'if_ST')
+        df_mkt_val = get_raw("xdf_market_value", 'mkt_val')
+        df_delist_period = get_raw("xdf_if_delisting_period", 'if_delist_period')
+        df_if_trade_suspend = get_raw("xdf_trade_suspension", 'if_trade_suspend')
+        df_limit_up = get_raw("xdf_limit_up_price", 'limit_up')
+        df_limit_down = get_raw("xdf_limit_down_price", 'limit_down')
 
         # Merging
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
