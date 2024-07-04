@@ -76,18 +76,22 @@ class Strategy:
 
         # mask = ~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
         df_filtered = df_merged[~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')]
-        df_min_400 = df_filtered[df_filtered['if_listing'] == 1]
-        df_min_400 = df_min_400[~(df_min_400['if_ST'] == 1)]
+        df_filtered = df_filtered[df_filtered['if_listing'] == 1]
+
+        df_min_400 = df_filtered[~(df_filtered['if_ST'] == 1)]
         df_min_400 = df_min_400[df_min_400['close'] >= 1]
         df_min_400 = df_min_400[~(df_min_400['if_delist_period'] == 1)]
         df_min_400.drop(columns=['if_listing'], inplace=True)
-
         df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
 
-        self.yesterday_stocks = set()
-        self.df_min_400 = df_min_400
+        # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
+        df_sel_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'mkt_val', 'if_delist_period'])
+
         self.old_weights = weights
         self.old_weights[:] = 0
+        self.df_sel_info = df_sel_info
+        self.df_min_400 = df_min_400
+        self.yesterday_stocks = set()
 
         #================================#
 
@@ -101,7 +105,6 @@ class Strategy:
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
 
-
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # Get the set of today's stocks
         today_stocks = set(self.df_min_400.loc[date].index.get_level_values(1))
@@ -114,59 +117,65 @@ class Strategy:
 
         new_weights = pd.Series(0, index=self.old_weights.index)
         ls_today_stocks = list(today_stocks)
-        new_weights[ls_today_stocks] = 1/400
+        new_weights[ls_today_stocks] = 1
+
+        today_sel_info = self.df_sel_info.loc[date]
 
         # iteratively go through each stocks in the df_spec, performing weights adjustment based on defined criteria
-        for index, row in df_spec.iterrows():
+        for index, row in today_sel_info.iterrows():
 
             stkcd = index[1] # iteratively select the stock code from the portfolio
             close_price = row['close']
-            if_ST = row['if_ST']
-            if_delist = row['if_delist_period']
             if_suspend = row['if_trade_suspend']
             up_limit = row['limit_up']
             down_limit = row['limit_down']
-            
-            # idx_today = self.trade_cal.index(date)
-            # idx_yesterday = self.trade_cal[idx_today - 1]
 
             # check if the stock is suspended in that day
             if if_suspend == 1:
                 # today this stock weight can't be adjusted, we can't trade on this stock since it is suspended. \
-                # so this stock remains in the selected 400 stocks and we assign the weight of this stock to be the same as yesterday
+                # so this stock remains in the selected stocks and assign the weight of this stock to be the same as yesterday
                 new_weights[stkcd] = self.old_weights.get(stkcd)
                 continue
 
             elif up_limit == close_price:
                 # we can only sell this stock rather than buy it, so we can only adjust the weight of this stock to be smaller than yesterday
-                if if_ST == 1 or close_price < 1 or if_delist == 1:
-                    # assign the weight of this stock to be 0
+                if stkcd in delete_stocks:
+                    # assign the weight of this delete_stock to be 0
                     new_weights[stkcd] = 0
-                    continue
                 else:
                     # assign this stock yesterday weight
                     new_weights[stkcd] = self.old_weights.get(stkcd)
-                    continue
+                continue
 
             elif down_limit == close_price:
                 # we can only buy this stock rather than sell it, so we can only adjust the weight of this stock to be larger than yesterday
-                # so we just simply set it to be yesterday's weight since we cannot sell
-                new_weights[stkcd] = weights.get(stkcd)
+                if stkcd in new_stocks:
+                    new_weights[stkcd] = 1
+                else:
+                    new_weights[stkcd] = self.old_weights.get(stkcd)
                 continue
 
             else: # continue normal selection
-                if if_ST == 1 or close_price < 1 or if_delist == 1:
-                    # assign the weight of this stock to be 0
+                if stkcd in new_stocks:
+                    new_weights[stkcd] = 1
+                elif stkcd in delete_stocks:
                     new_weights[stkcd] = 0
-                    continue
                 else:
-                    # assign the weight of this stock to be the same as yesterday
-                    new_weights[stkcd] = weights.get(stkcd)
-                    continue
+                    new_weights[stkcd] = self.old_weights.get(stkcd)
 
+        # After adjustment, extract the actual stocks today
+        actual_stocks_today = set(new_weights[new_weights == 1].index.tolist())
+
+        # Assign the weight of the selected stocks, using equal method
+        actual_stocks_num = len(actual_stocks_today)
+        if actual_stocks_num > 0:
+            weight_per_stock = 1 / actual_stocks_num
+            new_weights[list(actual_stocks_today)] = weight_per_stock
+
+        # Update today's final weights to be the old_weights to be used tomorrow
         self.old_weights = new_weights
 
         # Update yesterday_stocks for the next day
-        self.yesterday_stocks = final_today_stocks_pool
+        self.yesterday_stocks = actual_stocks_today
 
         return new_weights
