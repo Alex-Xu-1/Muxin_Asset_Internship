@@ -30,6 +30,7 @@ class Strategy:
                  log: tasksys.TaskLog,
                  taskdir: str,
                  params: dict,
+                 weights: pd.Series,
                  **kwargs,
                  ):
         self.taskdir = taskdir
@@ -68,6 +69,7 @@ class Strategy:
         df_hs300_weights = get_raw("xdf_hs300_weight", 'hs300_weights')
         df_zz1000_weights = get_raw("xdf_zz1000_weight", 'zz1000_weights')
 
+
         # Merging
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
                                 df_if_trade_suspend, df_limit_up, df_limit_down], axis=1)
@@ -81,34 +83,38 @@ class Strategy:
         df_min_400.drop(columns=['if_listing'], inplace=True)
 
         df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+
+        self.yesterday_stocks = set()
         self.df_min_400 = df_min_400
+        self.old_weights = weights
+        self.old_weights[:] = 0
+
         #================================#
 
     def __del__(self):
         # self.df_out.index.name = 'date'
         # self.df_out.to_csv(os.path.join(self.taskdir, f"data/size_data.csv"), encoding='gbk')
         pass
+
     #================================================#
     def on_func(self,
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
 
+
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
-        # TODO: 遴选新成分(权重%)
+        # Get the set of today's stocks
+        today_stocks = set(self.df_min_400.loc[date].index.get_level_values(1))
 
-        df_spec = self.df_min_400.loc[date]
-        selected_stocks = df_spec.index.get_level_values(1)
+        # Compare with yesterday's stocks and get the three partition
+        remain_stocks = self.yesterday_stocks.intersection(today_stocks)
+        new_stocks = today_stocks - self.yesterday_stocks
+        delete_stocks = self.yesterday_stocks - today_stocks
+        #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
 
-        new_weights = pd.Series(0, index=weights.index)
-
-        new_weights[selected_stocks] = 1/400
-
-        # try:
-        #     for i in selected_stocks:
-        #         new_weights[i] = 1/400
-        # except:
-        #     self.log.record(i)
-                                
+        new_weights = pd.Series(0, index=self.old_weights.index)
+        ls_today_stocks = list(today_stocks)
+        new_weights[ls_today_stocks] = 1/400
 
         # iteratively go through each stocks in the df_spec, performing weights adjustment based on defined criteria
         for index, row in df_spec.iterrows():
@@ -128,7 +134,7 @@ class Strategy:
             if if_suspend == 1:
                 # today this stock weight can't be adjusted, we can't trade on this stock since it is suspended. \
                 # so this stock remains in the selected 400 stocks and we assign the weight of this stock to be the same as yesterday
-                new_weights[stkcd] = weights.get(stkcd)
+                new_weights[stkcd] = self.old_weights.get(stkcd)
                 continue
 
             elif up_limit == close_price:
@@ -139,7 +145,7 @@ class Strategy:
                     continue
                 else:
                     # assign this stock yesterday weight
-                    new_weights[stkcd] = weights.get(stkcd)
+                    new_weights[stkcd] = self.old_weights.get(stkcd)
                     continue
 
             elif down_limit == close_price:
@@ -158,6 +164,9 @@ class Strategy:
                     new_weights[stkcd] = weights.get(stkcd)
                     continue
 
-        self.log.record(new_weights)
+        self.old_weights = new_weights
+
+        # Update yesterday_stocks for the next day
+        self.yesterday_stocks = final_today_stocks_pool
 
         return new_weights
