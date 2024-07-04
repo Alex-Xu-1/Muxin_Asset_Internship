@@ -75,6 +75,7 @@ class Strategy:
 
         # mask = ~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
         df_filtered = df_merged[~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')]
+        df_filtered = df_filtered[~df_filtered.index.get_level_values(1).astype(str).str.startswith('BJ')]
         df_filtered = df_filtered[df_filtered['if_listing'] == 1]
 
         df_min_400 = df_filtered[~(df_filtered['if_ST'] == 1)]
@@ -118,7 +119,7 @@ class Strategy:
         delete_stocks = self.yesterday_stocks - today_stocks
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
 
-        new_weights = pd.Series(0, index=self.old_weights.index)
+        new_weights = pd.Series(0, index=weights.index)
         ls_today_stocks = list(today_stocks)
         new_weights[ls_today_stocks] = 1
 
