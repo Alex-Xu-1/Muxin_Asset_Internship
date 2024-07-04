@@ -30,7 +30,6 @@ class Strategy:
                  log: tasksys.TaskLog,
                  taskdir: str,
                  params: dict,
-                 weights: pd.Series,
                  **kwargs,
                  ):
         self.taskdir = taskdir
@@ -87,8 +86,7 @@ class Strategy:
         # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
         df_sel_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'mkt_val', 'if_delist_period'])
 
-        self.old_weights = weights
-        self.old_weights[:] = 0
+        self.old_weights = pd.Series()
         self.df_sel_info = df_sel_info
         self.df_min_400 = df_min_400
         self.yesterday_stocks = set()
@@ -104,6 +102,11 @@ class Strategy:
     def on_func(self,
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
+
+        # Initialize the old_weights in the first day
+        if date == self.start_day:
+            self.old_weights = weights
+            self.old_weights[:] = 0
 
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # Get the set of today's stocks
