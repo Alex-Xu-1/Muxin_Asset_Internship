@@ -128,7 +128,7 @@ class Strategy:
         # iteratively go through each stocks in the df_spec, performing weights adjustment based on defined criteria
         for index, row in today_sel_info.iterrows():
 
-            stkcd = index[1] # iteratively select the stock code from the portfolio
+            stkcd = index # iteratively select the stock code from the portfolio
             close_price = row['close']
             if_suspend = row['if_trade_suspend']
             up_limit = row['limit_up']
@@ -181,5 +181,7 @@ class Strategy:
 
         # Update yesterday_stocks for the next day
         self.yesterday_stocks = actual_stocks_today
+
+        self.log.record(print(len(list(actual_stocks_today))))
 
         return new_weights

@@ -1,0 +1,17 @@
+2024-07-04 15:16:33.174,[INFO],quantvale.bt_pilots.index_alpha.INDEX_ALPHA_BT_V7
+2024-07-04 15:16:34.502,[INFO],begin_end_cal : 2024-05-13 2024-06-24
+2024-07-04 15:16:34.502,[INFO],Init
+2024-07-04 15:16:34.518,[INFO],df_pool : (5301, 1)
+2024-07-04 15:16:34.518,[INFO],all_qvcodes : 5301
+2024-07-04 15:16:40.688,[INFO],df_full_day_bars_of_qvcodes : 5301
+2024-07-04 15:16:47.359,[INFO],df_original_weight_mat : (30, 5301)
+2024-07-04 15:16:51.420,[INFO],df_original_index_day_bars : (30, 2)
+2024-07-04 15:16:51.420,[INFO],Finish Original Index
+2024-07-04 15:18:27.988,[INFO],dates : 30
+2024-07-04 15:18:27.988,[INFO],date_interval : 1
+2024-07-04 15:18:27.988,[INFO],trade_dates : 29
+2024-07-04 15:18:27.988,[INFO],df_new_weight_mat : (29, 5301)
+2024-07-04 15:18:27.988,[INFO],Finish New Index Constituents
+2024-07-04 15:18:40.157,[INFO],df_new_index_day_bars : (29, 2)
+2024-07-04 15:18:40.189,[INFO],Finish New Index
+2024-07-04 15:18:41.657,[INFO],Finish Export
