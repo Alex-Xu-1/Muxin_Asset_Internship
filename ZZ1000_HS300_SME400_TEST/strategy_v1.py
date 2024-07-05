@@ -83,12 +83,13 @@ class Strategy:
         df_min_400 = df_min_400[~(df_min_400['if_delist_period'] == 1)]
         df_min_400.drop(columns=['if_listing'], inplace=True)
         df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+        df_min_400 = df_min_400.reset_index(level=0, drop=True)
 
         # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
-        df_sel_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'mkt_val', 'if_delist_period'])
+        df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'mkt_val', 'if_delist_period'])
 
         self.old_weights = pd.Series()
-        self.df_sel_info = df_sel_info
+        self.df_adjust_info = df_adjust_info
         self.df_min_400 = df_min_400
         self.yesterday_stocks = set()
 
@@ -103,30 +104,30 @@ class Strategy:
     def on_func(self,
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
+        
+        # Get the set of today's stocks
+        today_stocks = set(self.df_min_400.loc[date].index.get_level_values(0))
 
+        today_adjust_info = self.df_adjust_info.loc[date]
+
+        new_weights = pd.Series(0, index=weights.index)
+        ls_today_stocks = list(today_stocks)
+        new_weights[ls_today_stocks] = 1
+        
         # Initialize the old_weights in the first day
         if date == self.start_day:
             self.old_weights = weights
             self.old_weights[:] = 0
 
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
-        # Get the set of today's stocks
-        today_stocks = set(self.df_min_400.loc[date].index.get_level_values(1))
-
         # Compare with yesterday's stocks and get the three partition
         remain_stocks = self.yesterday_stocks.intersection(today_stocks)
         new_stocks = today_stocks - self.yesterday_stocks
         delete_stocks = self.yesterday_stocks - today_stocks
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
 
-        new_weights = pd.Series(0, index=weights.index)
-        ls_today_stocks = list(today_stocks)
-        new_weights[ls_today_stocks] = 1
-
-        today_sel_info = self.df_sel_info.loc[date]
-
         # iteratively go through each stocks in the df_spec, performing weights adjustment based on defined criteria
-        for index, row in today_sel_info.iterrows():
+        for index, row in today_adjust_info.iterrows():
 
             stkcd = index # iteratively select the stock code from the portfolio
             close_price = row['close']
