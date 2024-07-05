@@ -40,6 +40,9 @@ class Strategy:
         self.args = self.params['Arguments']
         self.trade_cal: list = kwargs['trade_cal']
         self.all_qvcodes: list = kwargs['all_qvcodes']
+
+        self.yesterday_stocks = set()
+        self.old_weights = pd.Series()
         
         beg = pd.to_datetime(self.start_day).date()
         end = pd.to_datetime(self.end_day).date()
@@ -67,7 +70,7 @@ class Strategy:
         df_limit_down = get_raw("xdf_limit_down_price", 'limit_down')
         df_hs300_weights = get_raw("xdf_hs300_weight", 'hs300_weights')
         df_zz1000_weights = get_raw("xdf_zz1000_weight", 'zz1000_weights')
-
+        df_sw_industry = get_raw("xdf_sw_industry_level1", 'industry')
 
         # Merging
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
@@ -78,20 +81,27 @@ class Strategy:
         df_filtered = df_filtered[~df_filtered.index.get_level_values(1).astype(str).str.startswith('BJ')]
         df_filtered = df_filtered[df_filtered['if_listing'] == 1]
 
-        df_min_400 = df_filtered[~(df_filtered['if_ST'] == 1)]
-        df_min_400 = df_min_400[df_min_400['close'] >= 1]
-        df_min_400 = df_min_400[~(df_min_400['if_delist_period'] == 1)]
-        df_min_400.drop(columns=['if_listing'], inplace=True)
-        df_min_400 = df_min_400.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
-        df_min_400 = df_min_400.reset_index(level=0, drop=True)
-
-        # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
         df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'mkt_val', 'if_delist_period'])
 
-        self.old_weights = pd.Series()
+        def theory_min400_select(df):
+            df = df[~(df['if_ST'] == 1)]
+            df = df[df['close'] >= 1]
+            df = df[~(df['if_delist_period'] == 1)]
+            df.drop(columns=['if_listing'], inplace=True)
+            df = df.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+            df = df.reset_index(level=0, drop=True)
+            return df
+
+        df_theory_min_400 = theory_min400_select(df_filtered)
+
+        # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
+        
+
+        
         self.df_adjust_info = df_adjust_info
-        self.df_min_400 = df_min_400
-        self.yesterday_stocks = set()
+        self.df_theory_min_400 = df_theory_min_400
+        
+
 
         #================================#
 
@@ -105,30 +115,31 @@ class Strategy:
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
 
-        def suspend_limit_adjust(df, stkcd_list, prev_weights, theory_weights, final_weights):
-
+        def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights, final_weights):
             for i in stkcd_list:
 
                 if df.loc[i, 'if_suspend'] == 1:
-                    final_weights[i] = prev_weights[i]
+                    final_weights[i] = old_weights[i]
 
                 elif df.loc[i, 'limit_up'] == df.loc[i, 'close']:
-                    if prev_weights[i] >= theory_weights[i]:
+                    if old_weights[i] >= theory_weights[i]:
                         final_weights[i] = theory_weights[i]
-                    elif prev_weights[i] < theory_weights[i]:
-                        final_weights[i] = prev_weights[i]
+                    elif old_weights[i] < theory_weights[i]:
+                        final_weights[i] = old_weights[i]
 
                 elif df.loc[i, 'limit_down'] == df.loc[i, 'close']:
-                    if prev_weights[i] <= theory_weights[i]:
+                    if old_weights[i] <= theory_weights[i]:
                         final_weights[i] = theory_weights[i]
-                    elif prev_weights[i] > theory_weights[i]:
-                        final_weights[i] = prev_weights[i]
-            
+                    elif old_weights[i] > theory_weights[i]:
+                        final_weights[i] = old_weights[i]
+                
+                else:
+                     
             return final_weights
         
 
         # Get the set of today's stocks
-        today_stocks = list(self.df_min_400.loc[date].index.get_level_values(0))
+        theory_min400_stocks_today = list(self.df_theory_min_400.loc[date].index.get_level_values(0))
 
         # Compare with yesterday's stocks and get the three partition
         # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
@@ -138,14 +149,14 @@ class Strategy:
         today_adjust_info = self.df_adjust_info.loc[date]
         theory_weights = pd.Series(0, index=weights.index)
         final_weights = pd.Series(0, index=weights.index)
-        final_weights[today_stocks] = 1
+        final_weights[theory_min400_stocks_today] = 1
         
         # Initialize the old_weights in the first day
         if date == self.start_day:
             self.old_weights = weights
             self.old_weights[:] = 0
 
-        suspend_limit_adjust(today_adjust_info, self.old_weights, theory_weights, final_weights)
+        suspend_limit_adjust(today_adjust_info, theory_min400_stocks_today, self.old_weights, theory_weights, final_weights)
         
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # Compare with yesterday's stocks and get the three partition
@@ -171,4 +182,8 @@ class Strategy:
 
         self.log.record(print(len(list(actual_stocks_today))))
 
-        return final_weights
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # Need to add a line that extract all the stocks with non-zero \
+            # weights, and then return this small df to the system
+        return # ！！！
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
