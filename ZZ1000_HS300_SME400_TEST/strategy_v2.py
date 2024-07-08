@@ -32,8 +32,27 @@ class Strategy:
                  params: dict,
                  **kwargs,
                  ):
+
+        def get_raw(factor_name, col_rename, beg=beg, end=end):
+            df = rawfactors.get_rawfactor_table_by_date(
+                                        db="TEST",
+                                        name=factor_name,
+                                        begin_date=beg,
+                                        end_date=end)
+            return df.stack().rename(col_rename)
+
+        def theory_min400_select(df):
+            df = df[~(df['if_ST'] == 1)]
+            df = df[df['close'] >= 1]
+            df = df[~(df['if_delist_period'] == 1)]
+            df.drop(columns=['if_listing'], inplace=True)
+            df = df.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
+            df = df.reset_index(level=0, drop=True)
+            return df
+
+
         self.taskdir = taskdir
-        self.log = log
+        self.log = log 
         self.params = params
         self.start_day = self.params["BeginDate"]
         self.end_day = self.params["EndDate"]
@@ -51,15 +70,6 @@ class Strategy:
         # Getting raw data of all SH+SZ A share stocks, including: \
             # if_Listing, daily_Closing_Price, if_ST, is_in_Delisting_Period, \
             # if_Trade_Suspension, Market_Value
-
-        def get_raw(factor_name, col_rename):
-            df = rawfactors.get_rawfactor_table_by_date(
-                                        db="TEST",
-                                        name=factor_name,
-                                        begin_date=beg,
-                                        end_date=end)
-            return df.stack().rename(col_rename)
-
         df_listing = get_raw("xdf_if_listing_qvcode", 'if_listing')
         df_close = get_raw("xdf_close", 'close')
         df_ST = get_raw("xdf_if_ST", 'if_ST')
@@ -74,35 +84,29 @@ class Strategy:
 
         # Merging
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
-                                df_if_trade_suspend, df_limit_up, df_limit_down], axis=1)
+                                df_if_trade_suspend, df_limit_up, df_limit_down, df_sw_industry], axis=1)
+        df_zz1000 = pd.concat([df_zz1000_weights, df_sw_industry, df_mkt_val], axis=1)
+        df_hs300 = pd.concat([df_hs300_weights, df_sw_industry, df_mkt_val], axis=1)
+
+        all_hs300_stocks =  df_hs300_weights.index.get_level_values(1).unique()
 
         # mask = ~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
         df_filtered = df_merged[~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')]
         df_filtered = df_filtered[~df_filtered.index.get_level_values(1).astype(str).str.startswith('BJ')]
         df_filtered = df_filtered[df_filtered['if_listing'] == 1]
 
-        df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'mkt_val', 'if_delist_period'])
-
-        def theory_min400_select(df):
-            df = df[~(df['if_ST'] == 1)]
-            df = df[df['close'] >= 1]
-            df = df[~(df['if_delist_period'] == 1)]
-            df.drop(columns=['if_listing'], inplace=True)
-            df = df.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
-            df = df.reset_index(level=0, drop=True)
-            return df
-
         df_theory_min_400 = theory_min400_select(df_filtered)
 
         # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
-        
+        df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'if_delist_period'])
 
         
+
         self.df_adjust_info = df_adjust_info
         self.df_theory_min_400 = df_theory_min_400
-        
-
-
+        self.all_hs300_stocks = all_hs300_stocks
+        self.df_zz1000 = df_zz1000
+        self.df_hs300 = df_hs300
         #================================#
 
     def __del__(self):
@@ -114,6 +118,13 @@ class Strategy:
     def on_func(self,
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
+
+        def get_weighted_avg_indus_mkt_val(df, weight_name, date):
+            df_today = df.loc[date].fillna(0)
+            df_today['weighted_mkt_val_avg'] = df_today[weight_name]*df_today['mkt_val']
+            indus_mkt_sum = df_today.groupby('industry')['weighted_mkt_val_avg'].sum()
+            indus_mkt_val_weighted_avg = pd.Series(indus_mkt_sum, index=indus_mkt_sum.index)
+            return indus_mkt_val_weighted_avg
 
         def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights, final_weights):
             for i in stkcd_list:
@@ -138,6 +149,8 @@ class Strategy:
             return final_weights
         
 
+        zz1000_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_zz1000, 'zz1000_weights', date)
+        hs300_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_hs300, 'hs300_weights', date)
         # Get the set of today's stocks
         theory_min400_stocks_today = list(self.df_theory_min_400.loc[date].index.get_level_values(0))
 
@@ -156,7 +169,8 @@ class Strategy:
             self.old_weights = weights
             self.old_weights[:] = 0
 
-        suspend_limit_adjust(today_adjust_info, theory_min400_stocks_today, self.old_weights, theory_weights, final_weights)
+        final_weights = suspend_limit_adjust(today_adjust_info, theory_min400_stocks_today, \
+                                                self.old_weights, theory_weights, final_weights)
         
         #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
         # Compare with yesterday's stocks and get the three partition
