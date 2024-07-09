@@ -48,6 +48,7 @@ class Strategy:
             df.drop(columns=['if_listing'], inplace=True)
             df = df.groupby(level=0).apply(lambda x: x.nsmallest(400, 'mkt_val'))
             df = df.reset_index(level=0, drop=True)
+            df['min400_weights'] = 1 / 400
             return df
 
 
@@ -97,16 +98,15 @@ class Strategy:
 
         df_theory_min_400 = theory_min400_select(df_filtered)
 
-        # create a df that stores only 'close', 'if_trade_suspend', 'limit_up', and 'limit_down'
+        # create a df that stores only 'close', 'mkt_val', 'if_trade_suspend', 'limit_up', and 'limit_down'
         df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'if_delist_period'])
-
-        
 
         self.df_adjust_info = df_adjust_info
         self.df_theory_min_400 = df_theory_min_400
         self.all_hs300_stocks = all_hs300_stocks
         self.df_zz1000 = df_zz1000
         self.df_hs300 = df_hs300
+        self.df_hs300_weights = df_hs300_weights
         #================================#
 
     def __del__(self):
@@ -123,8 +123,47 @@ class Strategy:
             df_today = df.loc[date].fillna(0)
             df_today['weighted_mkt_val_avg'] = df_today[weight_name]*df_today['mkt_val']
             indus_mkt_sum = df_today.groupby('industry')['weighted_mkt_val_avg'].sum()
-            indus_mkt_val_weighted_avg = pd.Series(indus_mkt_sum, index=indus_mkt_sum.index)
+            indus_mkt_val_weighted_avg = pd.Series(indus_mkt_sum.values, index=indus_mkt_sum.index)
             return indus_mkt_val_weighted_avg
+
+        def weights_adjust_by_industry_mkt_val_alignment(zz1000, hs300, min400):
+            all_industries = zz1000.index.union(hs300.index).union(min400.index)
+            
+            # Dictionary to store the results
+            x_values = {}
+
+            for industry in all_industries:
+                zz1000_weight = zz1000.get(industry)
+                hs300_weight = hs300.get(industry)
+                min400_weight = min400.get(industry)
+                
+                if zz1000_weight is not None:
+                    if hs300_weight is not None and min400_weight is not None:
+                        # Scenario 1: This industry is in all 3 input series
+                        if min400_weight != hs300_weight:
+                            x = (zz1000_weight - min400_weight) / (hs300_weight - min400_weight)
+                        
+                    elif hs300_weight is not None:
+                        # Scenario 2: This industry is in hs300 and zz1000, but not in min400
+                        x = zz1000_weight / hs300_weight
+                        
+                    elif min400_weight is not None:
+                        # Scenario 3: This industry is in min400 and zz1000, but not in hs300
+                        x = zz1000_weight / min400_weight
+                        
+                    else:
+                        # Scenario 4: This industry is only in zz1000
+                        x = 2  # Indicate that the portfolio should choose the constituents in zz1000 itself
+                        # TODO: how to assign their weights?
+                        
+                    x_values[industry] = x
+                
+                # Scenario 4: This industry is not in zz1000, don't invest in it
+                # We do not include this industry in x_values
+            
+            return x_values
+
+            
 
         def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights, final_weights):
             for i in stkcd_list:
@@ -149,10 +188,13 @@ class Strategy:
             return final_weights
         
 
+
         zz1000_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_zz1000, 'zz1000_weights', date)
         hs300_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_hs300, 'hs300_weights', date)
-        # Get the set of today's stocks
-        theory_min400_stocks_today = list(self.df_theory_min_400.loc[date].index.get_level_values(0))
+        min400_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_theory_min_400, 'min400_weights', date)
+
+
+
 
         # Compare with yesterday's stocks and get the three partition
         # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
@@ -160,9 +202,18 @@ class Strategy:
         # delete_stocks = self.yesterday_stocks - today_stocks
 
         today_adjust_info = self.df_adjust_info.loc[date]
-        theory_weights = pd.Series(0, index=weights.index)
+
+        theory_weights_phase1 = pd.Series(0, index=weights.index)
+        theory_weights_phase2 = pd.Series()
         final_weights = pd.Series(0, index=weights.index)
-        final_weights[theory_min400_stocks_today] = 1
+
+        #////////////////////////////////////////////////////////////////////////////////////////////
+        # First we process the min400 stocks weight initialization:
+        # Get the set of today's theory min400 stocks
+        theory_min400_stocks_today = list(self.df_theory_min_400.loc[date].index.get_level_values(0))
+        
+        final_weights[theory_min400_stocks_today] = 1 / 400
+        
         
         # Initialize the old_weights in the first day
         if date == self.start_day:
@@ -170,14 +221,9 @@ class Strategy:
             self.old_weights[:] = 0
 
         final_weights = suspend_limit_adjust(today_adjust_info, theory_min400_stocks_today, \
-                                                self.old_weights, theory_weights, final_weights)
+                                                self.old_weights, theory_weights_phase1, final_weights)
         
-        #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
-        # Compare with yesterday's stocks and get the three partition
-        # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
-        # new_stocks = today_stocks - self.yesterday_stocks
-        # delete_stocks = self.yesterday_stocks - today_stocks
-        #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+        
 
         # After adjustment, extract the actual stocks today
         actual_stocks_today = set(final_weights[final_weights == 1].index.tolist())
@@ -201,3 +247,21 @@ class Strategy:
             # weights, and then return this small df to the system
         return # ！！！
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+        #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+        # Compare with yesterday's stocks and get the three partition
+        # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
+        # new_stocks = today_stocks - self.yesterday_stocks
+        # delete_stocks = self.yesterday_stocks - today_stocks
+        #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
