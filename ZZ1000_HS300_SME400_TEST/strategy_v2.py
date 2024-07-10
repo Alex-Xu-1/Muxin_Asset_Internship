@@ -96,13 +96,13 @@ class Strategy:
         df_filtered = df_filtered[~df_filtered.index.get_level_values(1).astype(str).str.startswith('BJ')]
         df_filtered = df_filtered[df_filtered['if_listing'] == 1]
 
-        df_theory_min_400 = theory_min400_select(df_filtered)
+        df_theory_min400 = theory_min400_select(df_filtered)
 
         # create a df that stores only 'close', 'mkt_val', 'if_trade_suspend', 'limit_up', and 'limit_down'
         df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'if_delist_period'])
 
         self.df_adjust_info = df_adjust_info
-        self.df_theory_min_400 = df_theory_min_400
+        self.df_theory_min400 = df_theory_min400
         self.all_hs300_stocks = all_hs300_stocks
         self.df_zz1000 = df_zz1000
         self.df_hs300 = df_hs300
@@ -119,16 +119,35 @@ class Strategy:
                 date: datetime.date,
                 weights: pd.Series) -> pd.Series:
 
-        def get_weighted_avg_indus_mkt_val(df, weight_name, date):
-            df_today = df.loc[date].fillna(0)
-            df_today['weighted_mkt_val_avg'] = df_today[weight_name]*df_today['mkt_val']
-            indus_mkt_sum = df_today.groupby('industry')['weighted_mkt_val_avg'].sum()
-            indus_mkt_val_weighted_avg = pd.Series(indus_mkt_sum.values, index=indus_mkt_sum.index)
+        def calculate_industry_weight_sum(df, weight_name, date):
+            df_temp = df.loc[date].copy()  
+            df_today = df_temp.loc[df_temp[weight_name] > 0].copy()  
+            # Group by industry and calculate sum of weights
+            sum_weights_industry = df_today.groupby('industry')[weight_name].sum()
+            industry_weight_sum_series = pd.Series(sum_weights_industry.values, index=sum_weights_industry.index)
+            return industry_weight_sum_series
+
+        def get_weighted_avg_indus_mkt_val(df, weight_name, date):           
+            df_temp = df.loc[date].copy()  
+            df_today = df_temp.loc[df_temp[weight_name] > 0].copy()  
+
+            # Group by industry and calculate sum of weights
+            df_today['sum_weights_industry'] = df_today.groupby('industry')[weight_name].transform('sum')
+            
+            # Calculate industry weights
+            df_today['indus_weight'] = df_today[weight_name] / df_today['sum_weights_industry']
+            # Calculate weighted market value average
+            df_today.loc[:, 'weighted_mkt_val_avg'] = df_today['indus_weight'] * df_today['mkt_val']
+            # print(f'{weight_name}: \n', df_today)
+            # Group by industry and sum the weighted market values
+            indus_mkt_avg_sum = df_today.groupby('industry')['weighted_mkt_val_avg'].sum()
+            # Create a Series from the summed values
+            indus_mkt_val_weighted_avg = pd.Series(indus_mkt_avg_sum.values, index=indus_mkt_avg_sum.index)
             return indus_mkt_val_weighted_avg
+
 
         def weights_adjust_by_industry_mkt_val_alignment(zz1000, hs300, min400):
             all_industries = zz1000.index.union(hs300.index).union(min400.index)
-            
             # Dictionary to store the results
             x_values = {}
 
@@ -136,34 +155,65 @@ class Strategy:
                 zz1000_weight = zz1000.get(industry)
                 hs300_weight = hs300.get(industry)
                 min400_weight = min400.get(industry)
-                
+
                 if zz1000_weight is not None:
                     if hs300_weight is not None and min400_weight is not None:
                         # Scenario 1: This industry is in all 3 input series
                         if min400_weight != hs300_weight:
                             x = (zz1000_weight - min400_weight) / (hs300_weight - min400_weight)
-                        
+                            if x > 1: # also can't do market val alignment; e.g. 申万环保：1.048729e+10, NaN, 1.433967e+09
+                                x = -10 
                     elif hs300_weight is not None:
                         # Scenario 2: This industry is in hs300 and zz1000, but not in min400
                         x = zz1000_weight / hs300_weight
-                        
                     elif min400_weight is not None:
                         # Scenario 3: This industry is in min400 and zz1000, but not in hs300
                         x = zz1000_weight / min400_weight
-                        
                     else:
                         # Scenario 4: This industry is only in zz1000
-                        x = 2  # Indicate that the portfolio should choose the constituents in zz1000 itself
+                        x = -10  # Indicate that the portfolio should choose the constituents in zz1000 itself
                         # TODO: how to assign their weights?
-                        
+        
                     x_values[industry] = x
-                
-                # Scenario 4: This industry is not in zz1000, don't invest in it
-                # We do not include this industry in x_values
-            
             return x_values
 
-            
+        def phase1_weight_zoom(x_values, df_chosen_stocks_today_adjust_info, \
+                                chosen_today_stocks, zz1000_indus_weights_sum_today, \
+                                hs300_indus_weights_sum_today, min400_indus_weights_sum_today, init_weights):
+
+            all_industries = x_values.keys()
+            theory_weights = init_weights
+
+            for industry in all_industries:
+                # Calculate the weight sum of each industry
+                zz1000_weight_sum = zz1000_indus_weights_sum_today.get(industry)
+                hs300_weight_sum = hs300_indus_weights_sum_today.get(industry)
+                min400_weight_sum = min400_indus_weights_sum_today.get(industry)
+                x = x_values.get(industry)
+
+                if x == -10:
+                    x
+                else:
+                    # Calculate the target adjust weight for hs300 and min400
+                    hs300_tar_weight = x * zz1000_weight_sum
+                    min400_tar_weight = (1 - x) * zz1000_weight_sum
+                
+                    # Calculate the weight zooming scale: how much should we zoom the initial weights
+                    hs300_zoom_scale = hs300_tar_weight / hs300_weight_sum
+                    min400_zoom_scale = min400_tar_weight / min400_weight_sum
+
+                    # Conduct weight zooming on initial weights
+                    for stock_code in chosen_today_stocks:
+                        if stock_industry == industry:
+                            initial_weight = theory_weights.loc[stock_code]
+                            hs300_adjusted_weight = initial_weight * hs300_zoom_scale
+
+                            min400_adjusted_weight = initial_weight * min400_zoom_scale
+                            # Assign adjusted weights back to theory_weights
+                            theory_weights.loc[stock_code] = min(hs300_adjusted_weight, min400_adjusted_weight)
+                
+            return theory_weights
+
 
         def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights, final_weights):
             for i in stkcd_list:
@@ -188,39 +238,62 @@ class Strategy:
             return final_weights
         
 
-
-        zz1000_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_zz1000, 'zz1000_weights', date)
-        hs300_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_hs300, 'hs300_weights', date)
-        min400_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_theory_min_400, 'min400_weights', date)
-
-
-
-
         # Compare with yesterday's stocks and get the three partition
         # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
         # new_stocks = today_stocks - self.yesterday_stocks
         # delete_stocks = self.yesterday_stocks - today_stocks
 
-        today_adjust_info = self.df_adjust_info.loc[date]
+        df_all_stocks_today_adjust_info = self.df_adjust_info.loc[date]
 
+        initial_weights_today = pd.Series(0, index=weights.index)
         theory_weights_phase1 = pd.Series(0, index=weights.index)
-        theory_weights_phase2 = pd.Series()
+        theory_weights_phase2 = pd.Series(0, index=weights.index)
         final_weights = pd.Series(0, index=weights.index)
 
+        # Extract and update initial weights to the initial_weight_today series
+        df_theory_zz1000_today = self.df_zz1000.loc[date].copy()
+        df_theory_hs300_today = self.df_hs300.loc[date].copy()  
+        df_theory_min400_today = self.df_theory_min400.loc[date].copy()  
+
+        initial_hs300_weights = df_theory_hs300_today['hs300_weights']
+        initial_min400_weights = df_theory_min400_today['min400_weights']
+        initial_weights_today.update(initial_hs300_weights)
+        initial_weights_today.update(initial_min400_weights)
+
         #////////////////////////////////////////////////////////////////////////////////////////////
-        # First we process the min400 stocks weight initialization:
-        # Get the set of today's theory min400 stocks
-        theory_min400_stocks_today = list(self.df_theory_min_400.loc[date].index.get_level_values(0))
+
+        # Get the lists of theory stocks holding
+        theory_zz1000_today_stocks_list = list(df_theory_zz1000_today.index.get_level_values(0))
+        theory_hs300_today_stocks_list = list(df_theory_hs300_today.index.get_level_values(0))
+        theory_min400_today_stocks_list = list(df_theory_min400_today.index.get_level_values(0))
+        chosen_zz1000_today_stocks_list = list(df_theory_zz1000_today[df_theory_zz1000_today['zz1000_weights'] > 0].index.get_level_values(0))
+        chosen_hs300_today_stocks_list = list(df_theory_hs300_today[df_theory_hs300_today['hs300_weights'] > 0].index.get_level_values(0))
+        chosen_min400_today_stocks_list = list(df_theory_min400_today[df_theory_min400_today['min400_weights'] > 0].index.get_level_values(0))
+        theory_today_stocks_list = theory_zz1000_today_stocks_list + theory_hs300_today_stocks_list + theory_min400_today_stocks_list
+        chosen_today_stocks_list = chosen_zz1000_today_stocks_list + chosen_hs300_today_stocks_list + chosen_min400_today_stocks_list
+
+        df_chosen_stocks_today_adjust_info = df_all_stocks_today_adjust_info.loc[df_all_stocks_today_adjust_info.index.isin(chosen_today_stocks_list)]
+        # ///////////////////////////////////////////////////////////////////////////////////////////
+        zz1000_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_zz1000, 'zz1000_weights', date)
+        hs300_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_hs300, 'hs300_weights', date)
+        min400_indus_weighted_avg = get_weighted_avg_indus_mkt_val(self.df_theory_min400, 'min400_weights', date)
+
+        zz1000_weights_sum = calculate_industry_weight_sum(self.df_zz1000, 'zz1000_weights', date)
+        hs300_weights_sum = calculate_industry_weight_sum(self.df_hs300, 'hs300_weights', date)
+        min400_weights_sum = calculate_industry_weight_sum(self.df_theory_min400, 'min400_weights', date)
+
+        x_values = weights_adjust_by_industry_mkt_val_alignment(zz1000_indus_weighted_avg, hs300_indus_weighted_avg, \
+                                                                                            min400_indus_weighted_avg)
         
-        final_weights[theory_min400_stocks_today] = 1 / 400
-        
-        
+        theory_weights_phase1 = phase1_weight_zoom(x_values, df_chosen_stocks_today_adjust_info, chosen_today_stocks_list, \
+                                                    zz1000_weights_sum, hs300_weights_sum, min400_weights_sum, initial_weights_today)
+        # ////////////////////////////////////////////////////////////////////////////////////////////
         # Initialize the old_weights in the first day
         if date == self.start_day:
             self.old_weights = weights
             self.old_weights[:] = 0
 
-        final_weights = suspend_limit_adjust(today_adjust_info, theory_min400_stocks_today, \
+        final_weights = suspend_limit_adjust(df_all_stocks_today_adjust_info, theory_min400_today_stocks_list, \
                                                 self.old_weights, theory_weights_phase1, final_weights)
         
         
