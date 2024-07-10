@@ -143,7 +143,6 @@ class Strategy:
             indus_mkt_avg_sum = df_today.groupby('industry')['weighted_mkt_val_avg'].sum()
             # Create a Series from the summed values
             indus_mkt_val_weighted_avg = pd.Series(indus_mkt_avg_sum.values, index=indus_mkt_avg_sum.index)
-            
             return indus_mkt_val_weighted_avg
 
         def weights_adjust_by_industry_mkt_val_alignment(zz1000, hs300, min400):
