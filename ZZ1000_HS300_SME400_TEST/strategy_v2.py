@@ -129,7 +129,7 @@ class Strategy:
 
         def get_weighted_avg_indus_mkt_val(df, weight_name, date):           
             df_temp = df.loc[date].copy()  
-            df_today = df_temp.loc[df_temp[weight_name] > 0].copy()  
+            df_today = df_temp.loc[df_temp[weight_name] > 0].copy()
 
             # Group by industry and calculate sum of weights
             df_today['sum_weights_industry'] = df_today.groupby('industry')[weight_name].transform('sum')
@@ -211,6 +211,7 @@ class Strategy:
                             min400_adjusted_weight = initial_weight * min400_zoom_scale
                             # Assign adjusted weights back to theory_weights
                             theory_weights.loc[stock_code] = min(hs300_adjusted_weight, min400_adjusted_weight)
+
                 
             return theory_weights
 
