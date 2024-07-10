@@ -145,6 +145,7 @@ class Strategy:
             indus_mkt_val_weighted_avg = pd.Series(indus_mkt_avg_sum.values, index=indus_mkt_avg_sum.index)
             return indus_mkt_val_weighted_avg
 
+
         def weights_adjust_by_industry_mkt_val_alignment(zz1000, hs300, min400):
             all_industries = zz1000.index.union(hs300.index).union(min400.index)
             # Dictionary to store the results
