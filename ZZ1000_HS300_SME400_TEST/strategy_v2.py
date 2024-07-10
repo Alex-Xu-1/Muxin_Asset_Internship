@@ -215,6 +215,7 @@ class Strategy:
                 
             return theory_weights
 
+
         def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights, final_weights):
             for i in stkcd_list:
 
