@@ -5,7 +5,7 @@
 
 from quantvale.bt_pilots.index_alpha.INDEX_ALPHA_BT_V7 import TaskProto
 
-from .strategy_v1 import Strategy
+from .strategy_v2 import Strategy
 
 
 class Task(TaskProto):
