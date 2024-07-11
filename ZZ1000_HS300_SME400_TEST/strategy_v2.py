@@ -85,21 +85,21 @@ class Strategy:
 
         # Merging
         df_merged = pd.concat([df_listing, df_close, df_ST, df_mkt_val, df_delist_period, \
-                                df_if_trade_suspend, df_limit_up, df_limit_down, df_sw_industry], axis=1)
-        df_zz1000 = pd.concat([df_zz1000_weights, df_sw_industry, df_mkt_val], axis=1)
-        df_hs300 = pd.concat([df_hs300_weights, df_sw_industry, df_mkt_val], axis=1)
+                                df_if_trade_suspend, df_limit_up, df_limit_down, df_sw_industry], axis=1).fillna(0)
+        df_zz1000 = pd.concat([df_zz1000_weights, df_sw_industry, df_mkt_val], axis=1).fillna(0)
+        df_hs300 = pd.concat([df_hs300_weights, df_sw_industry, df_mkt_val], axis=1).fillna(0)
 
         all_hs300_stocks =  df_hs300_weights.index.get_level_values(1).unique()
 
         # mask = ~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')
         df_filtered = df_merged[~df_merged.index.get_level_values(1).astype(str).str.endswith('BJ')]
         df_filtered = df_filtered[~df_filtered.index.get_level_values(1).astype(str).str.startswith('BJ')]
-        df_filtered = df_filtered[df_filtered['if_listing'] == 1]
+        df_filtered = df_filtered[df_filtered['if_listing'] == 1].fillna(0)
 
-        df_theory_min400 = theory_min400_select(df_filtered)
+        df_theory_min400 = theory_min400_select(df_filtered).fillna(0)
 
         # create a df that stores only 'close', 'mkt_val', 'if_trade_suspend', 'limit_up', and 'limit_down'
-        df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'if_delist_period'])
+        df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'if_delist_period']).fillna(0)
 
         self.df_adjust_info = df_adjust_info
         self.df_theory_min400 = df_theory_min400
