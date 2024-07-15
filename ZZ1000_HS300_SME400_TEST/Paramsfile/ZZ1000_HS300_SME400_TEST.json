@@ -6,8 +6,8 @@
     "QSCode": "OriginalIndex",
     "UseIndexDB": false,
     "Pool": "//192.168.2.39/XupengganStrategies/ZZ1000_HS300_SME400_TEST/df_HUSHEN_A.csv",
-    "BeginDate": "2015-01-05",
-    "EndDate": "2024-06-28",
+    "BeginDate": "2024-01-01",
+    "EndDate": "2024-01-15",
     "DateInterval": 1,
     "Slippage": 1.5e-3,
     "Arguments": {

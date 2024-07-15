@@ -128,7 +128,7 @@ class Strategy:
 
         def calculate_industry_weight_sum(df, weight_name, date):
             df_temp = df.loc[date].copy()  
-            df_today = df_temp.loc[df_temp[weight_name] > 0].copy()  
+            df_today = df_temp.loc[df_temp[weight_name] > 0].copy()
             # Group by industry and calculate sum of weights
             sum_weights_industry = df_today.groupby('industry')[weight_name].sum()
             industry_weight_sum_series = pd.Series(sum_weights_industry.values, index=sum_weights_industry.index)
@@ -170,8 +170,8 @@ class Strategy:
                         # Scenario 1: This industry is in all 3 input series
                         if min400_weight != hs300_weight:
                             x = (zz1000_weight - min400_weight) / (hs300_weight - min400_weight)
-                            if x > 1: # also can't do market val alignment; e.g. 申万环保：1.048729e+10, NaN, 1.433967e+09
-                                x = -10 
+                            # if x > 1: # also can't do market val alignment; e.g. 申万环保：1.048729e+10, NaN, 1.433967e+09
+                            #     x = -10 
                     elif hs300_weight is not None:
                         # Scenario 2: This industry is in hs300 and zz1000, but not in min400
                         x = -20
@@ -246,9 +246,14 @@ class Strategy:
         def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights_phase1, final_weights_phase1):
 
             common_stocks = list(set(stkcd_list).intersection(set(old_weights.index.get_level_values(0))))
-            test1 = list(set(stkcd_list) - set(old_weights.index.get_level_values(0)))
-            test2 = list(set(old_weights.index.get_level_values(0)) - set(stkcd_list))
-            # self.log.record(len(test1), len(test2))
+            # test1 = list(set(stkcd_list) - set(old_weights.index.get_level_values(0)))
+            # test2 = list(set(old_weights.index.get_level_values(0)) - set(stkcd_list))
+            # self.log.record(len(common_stocks))
+            # self.log.record(len(test1))
+            # self.log.record(len(test2))
+            # self.log.record(len('weights in sus_lim_adj:'))
+            # self.log.record(len(old_weights.index.get_level_values(0).unique()))
+            # self.log.record(len(theory_weights_phase1.index.get_level_values(0).unique()))
             for i in common_stocks:
                 # try:
                 if df.loc[i, 'if_trade_suspend'] == 1:
@@ -273,10 +278,14 @@ class Strategy:
                 #     self.exception_list.append(i)
                 #     # self.log.record(self.exception_list)
                 #     final_weights_phase1[i] = theory_weights_phase1[i]
-                    
+                self.log.record('111')
+                self.log.record(len(final_weights_phase1.index.get_level_values(0).unique()))    
             return final_weights_phase1
         
-
+        self.log.record('///////////////////////////////////////')
+        self.log.record(date)
+        self.log.record('original')
+        self.log.record(len(weights.index.get_level_values(0).unique()))
         # Compare with yesterday's stocks and get the three partition
         # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
         # new_stocks = today_stocks - self.yesterday_stocks
@@ -367,9 +376,10 @@ class Strategy:
 
         # Extract only the stocks with nonzero weights and return to the system for shorter backtesting time
         return_portfolio_weights = final_weights_phase1[final_weights_phase1 != 0]
-        self.log.record('///////////////////////////////////////')
-        self.log.record(date)
-        self.log.record(len(return_portfolio_weights))
+
+        # self.log.record('///////////////////////////////////////')
+        # self.log.record(date)
+        # self.log.record(len(return_portfolio_weights))
 
         # Filter return_portfolio_weights for each component and sum the weights
         hs300_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_hs300_stocks)].sum()
@@ -378,9 +388,9 @@ class Strategy:
 
 
         # Calculate percentages
-        self.log.record(hs300_weights_sum)
-        self.log.record(min400_weights_sum)
-        self.log.record(zz1000_weights_sum)
+        # self.log.record(hs300_weights_sum)
+        # self.log.record(min400_weights_sum)
+        # self.log.record(zz1000_weights_sum)
         
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # Need to add a line that extract all the stocks with non-zero \
