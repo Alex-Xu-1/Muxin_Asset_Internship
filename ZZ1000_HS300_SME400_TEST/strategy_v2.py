@@ -359,6 +359,11 @@ class Strategy:
         # ////////////////////////////////////////////////////////////////////////////////////////////
         # Initialize the old_weights in the first day
         
+
+        final_weights_phase1 = suspend_limit_adjust(df_all_stocks_today_adjust_info, all_stocks_today_adjust_list, \
+                                                    self.old_weights, theory_weights_phase1, final_weights_phase1)
+        
+        # self.log.record('555: final_weights_phase1 done')
         
 
         final_weights_phase1 = suspend_limit_adjust(df_all_stocks_today_adjust_info, all_stocks_today_adjust_list, \
@@ -383,6 +388,9 @@ class Strategy:
 
         # Extract only the stocks with nonzero weights and return to the system for shorter backtesting time
         return_portfolio_weights = final_weights_phase1[final_weights_phase1 != 0]
+        self.log.record('///////////////////////////////////////')
+        self.log.record(date)
+        self.log.record(len(return_portfolio_weights))
 
         # self.log.record('///////////////////////////////////////')
         # self.log.record(date)
@@ -398,6 +406,7 @@ class Strategy:
         # self.log.record(hs300_weights_sum)
         # self.log.record(min400_weights_sum)
         # self.log.record(zz1000_weights_sum)
+
         
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # Need to add a line that extract all the stocks with non-zero \
