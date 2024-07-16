@@ -49,6 +49,9 @@ class Strategy:
         self.yesterday_stocks = set()
         self.old_weights = pd.Series()
         
+        stocks_pool = pd.read_csv('//192.168.2.39/XupengganStrategies/ZZ1000_HS300_SME400_TEST/df_HUSHEN_A.csv')
+        self.stocks_pool = stocks_pool.set_index('qvcode')['weight']
+
         beg = pd.to_datetime(self.start_day).date()
         end = pd.to_datetime(self.end_day).date()
 
@@ -105,6 +108,9 @@ class Strategy:
         # create a df that stores only 'close', 'mkt_val', 'if_trade_suspend', 'limit_up', and 'limit_down'
         df_adjust_info = df_filtered.drop(columns=['if_listing', 'if_ST', 'if_delist_period']).fillna(0)
 
+        self.old_weights = self.stocks_pool
+        self.old_weights[:] = 0
+
         self.df_adjust_info = df_adjust_info
         self.df_theory_min400 = df_theory_min400
         self.all_zz1000_stocks = all_zz1000_stocks
@@ -155,7 +161,9 @@ class Strategy:
 
 
         def get_weights_adjust_parameter_by_industry_mkt_val_alignment(zz1000, hs300, min400):
-            all_industries = zz1000.index.union(hs300.index).union(min400.index)
+            # all_industries = zz1000.index.union(hs300.index).union(min400.index)
+
+            all_industries = zz1000.index
             
             # Dictionary to store the results
             x_values = {}
@@ -246,15 +254,19 @@ class Strategy:
         def suspend_limit_adjust(df, stkcd_list, old_weights, theory_weights_phase1, final_weights_phase1):
 
             common_stocks = list(set(stkcd_list).intersection(set(old_weights.index.get_level_values(0))))
-            # test1 = list(set(stkcd_list) - set(old_weights.index.get_level_values(0)))
-            # test2 = list(set(old_weights.index.get_level_values(0)) - set(stkcd_list))
-            # self.log.record(len(common_stocks))
-            # self.log.record(len(test1))
-            # self.log.record(len(test2))
-            # self.log.record(len('weights in sus_lim_adj:'))
-            # self.log.record(len(old_weights.index.get_level_values(0).unique()))
-            # self.log.record(len(theory_weights_phase1.index.get_level_values(0).unique()))
-            for i in common_stocks:
+            test1 = list(set(stkcd_list) - set(old_weights.index.get_level_values(0)))
+            test2 = list(set(old_weights.index.get_level_values(0)) - set(stkcd_list))
+
+            self.log.record('///////////////////////////////////////')
+            self.log.record(date)
+            self.log.record(len(common_stocks))
+            self.log.record(len(test1))
+            self.log.record(len(test2))
+            self.log.record('weights in sus_lim_adj:')
+            self.log.record(len(old_weights.index.get_level_values(0).unique()))
+            self.log.record(len(theory_weights_phase1.index.get_level_values(0).unique()))
+
+            for i in stkcd_list:
                 # try:
                 if df.loc[i, 'if_trade_suspend'] == 1:
                     final_weights_phase1[i] = old_weights[i]
@@ -278,14 +290,11 @@ class Strategy:
                 #     self.exception_list.append(i)
                 #     # self.log.record(self.exception_list)
                 #     final_weights_phase1[i] = theory_weights_phase1[i]
-                self.log.record('111')
-                self.log.record(len(final_weights_phase1.index.get_level_values(0).unique()))    
+
+                # self.log.record('111')
+                # self.log.record(len(final_weights_phase1.index.get_level_values(0).unique()))    
             return final_weights_phase1
-        
-        self.log.record('///////////////////////////////////////')
-        self.log.record(date)
-        self.log.record('original')
-        self.log.record(len(weights.index.get_level_values(0).unique()))
+     
         # Compare with yesterday's stocks and get the three partition
         # remain_stocks = self.yesterday_stocks.intersection(today_stocks)
         # new_stocks = today_stocks - self.yesterday_stocks
@@ -294,10 +303,10 @@ class Strategy:
         df_all_stocks_today_adjust_info = self.df_adjust_info.loc[date]
         all_stocks_today_adjust_list = list(df_all_stocks_today_adjust_info.index.get_level_values(0)) # this is also the stocks that are listing today
 
-        theory_weights_phase1 = pd.Series(0, index=weights.index)
-        theory_weights_phase2 = pd.Series(0, index=weights.index)
-        final_weights_phase1 = pd.Series(0, index=weights.index)
-        final_weights_phase2 = pd.Series(0, index=weights.index)
+        theory_weights_phase1 = pd.Series(0, index=self.stocks_pool.index)
+        theory_weights_phase2 = pd.Series(0, index=self.stocks_pool.index)
+        final_weights_phase1 = pd.Series(0, index=self.stocks_pool.index)
+        final_weights_phase2 = pd.Series(0, index=self.stocks_pool.index)
 
         # Extract and update initial weights to the initial_weight_today series
         df_zz1000_today = self.df_zz1000.loc[date].copy()
@@ -349,9 +358,7 @@ class Strategy:
         # self.log.record(print('444: theory_weights_phase1 done'))
         # ////////////////////////////////////////////////////////////////////////////////////////////
         # Initialize the old_weights in the first day
-        if date == self.start_day:
-            self.old_weights = weights
-            self.old_weights[:] = 0
+        
         
 
         final_weights_phase1 = suspend_limit_adjust(df_all_stocks_today_adjust_info, all_stocks_today_adjust_list, \
@@ -382,9 +389,9 @@ class Strategy:
         # self.log.record(len(return_portfolio_weights))
 
         # Filter return_portfolio_weights for each component and sum the weights
-        hs300_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_hs300_stocks)].sum()
-        min400_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_min400_stocks)].sum()
-        zz1000_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_zz1000_stocks)].sum()
+        # hs300_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_hs300_stocks)].sum()
+        # min400_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_min400_stocks)].sum()
+        # zz1000_weights_sum = return_portfolio_weights[return_portfolio_weights.index.isin(self.all_zz1000_stocks)].sum()
 
 
         # Calculate percentages
