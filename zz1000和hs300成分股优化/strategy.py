@@ -299,6 +299,7 @@ class Strategy:
         # new_stocks = today_stocks - self.yesterday_stocks
         # delete_stocks = self.yesterday_stocks - today_stocks
 
+        def 
         df_all_stocks_today_adjust_info = self.df_adjust_info.loc[date]
         all_stocks_today_adjust_list = list(df_all_stocks_today_adjust_info.index.get_level_values(0)) # this is also the stocks that are listing today
 
