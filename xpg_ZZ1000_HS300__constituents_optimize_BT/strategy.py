@@ -299,6 +299,7 @@ class Strategy:
         # new_stocks = today_stocks - self.yesterday_stocks
         # delete_stocks = self.yesterday_stocks - today_stocks
 
+        def 
         df_all_stocks_today_adjust_info = self.df_adjust_info.loc[date]
         all_stocks_today_adjust_list = list(df_all_stocks_today_adjust_info.index.get_level_values(0)) # this is also the stocks that are listing today
 
@@ -383,18 +384,6 @@ class Strategy:
         # Extract only the stocks with nonzero weights and return to the system for shorter backtesting time
         return_portfolio_weights = final_weights_phase1[final_weights_phase1 != 0]
 
-        # Calculate the sum of the weights
-        weights_sum = return_portfolio_weights.sum()
-
-        # Check if the sum of weights is not equal to 1
-        if weights_sum != 1:
-            # Normalize the weights to make the sum equal to 1
-            normalized_weights = return_portfolio_weights / weights_sum
-        else:
-            # If the sum is already 1, no adjustment is needed
-            normalized_weights = return_portfolio_weights
-
-
         # self.log.record('///////////////////////////////////////')
         # self.log.record(date)
         # self.log.record(len(return_portfolio_weights))
@@ -413,7 +402,7 @@ class Strategy:
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # Need to add a line that extract all the stocks with non-zero \
             # weights, and then return this small df to the system
-        return normalized_weights
+        return return_portfolio_weights
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
